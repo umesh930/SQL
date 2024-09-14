@@ -1,4 +1,4 @@
-test repo for commands demonstration
+.
 
 <!---
 umesh930/umesh930 is a ✨ special ✨ repository because its `README.md` (this file) appears on your GitHub profile.
