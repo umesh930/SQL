@@ -1,3 +1,0 @@
-select 'sister'
-union 
-select'brother';
