@@ -77,6 +77,54 @@ group  by year
 order  by year
 
 
+7. Which circuit has hosted the most no of races. Display the circuit name, no of races,
+city and country.
+
+select c.name as circuiut_name ,c.location as city,c.country,count(1) as tot_races   
+from races r
+join  circuits c on c.circuitid = r.circuitid
+group by  c.name,c.location,c.country 
+order by tot_races  desc
+limit 1
+
+8. Display the following for 2022 season:
+Year, Race_no, circuit name, driver name, driver race position, driver race points,
+flag to indicate if winner
+, constructor name, constructor position, constructor points, , flag to indicate if
+constructor is winner
+, race status of each driver, flag to indicate fastest lap for which driver, total no of pit
+stops by each driver
+
+select r.year,r.raceid as race_no,c.name as circuit_name,d.forename||''||d.surname as driver_name,
+ds.position as driver_race_position,ds.points as driver_race_points,case when ds.position=1 then
+'winner' end as driver_winner,co.name as constructor_namne,cs.position as constructor_position,
+cs.points as constructor_points,case when cs.position= 1 then 'winner' end as constructor_winner,
+s.status,x.tot_pit_stops as tot_pit_stops,case when mm.fastest_lap is not null then 'fastest_lap' end
+ as fastest_lap
+from races r
+join circuits c on c.circuitid =r.circuitid
+join driver_standings ds on ds.raceid=r.raceid
+join drivers d on d.driverid = ds.driverid
+join constructor_standings cs on cs.raceid = r.raceid
+join constructors  co on co.constructorid = cs.constructorid
+join results res on res.raceid = r.raceid and res.driverid = d.driverid and res.constructorid= 
+co.constructorid
+join status s on s.statusid = res.statusid
+left join(
+          select driverid,raceid,count(1) as tot_pit_stops
+          from pit_stops
+           group by raceid,driverid,raceid
+          )x on x.driverid = d.driverid and x.raceid = r.raceid
+left join (
+            select lt.driverid,lt.raceid,fastest_lap
+            from lap_times lt
+            join(
+            select raceid,min(time) as fastest_lap
+            from lap_times
+            group by  raceid
+                )t on t.raceid = lt.raceid  and t.fastest_lap=lt.time
+           )mm on mm.driverid=d.driverid and mm.raceid= r.raceid 
+where r.year=2022 
 
 
 
