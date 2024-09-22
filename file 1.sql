@@ -128,6 +128,52 @@ where r.year=2022
 
 
 
+9) List down the names of all F1 champions and the no of times they have won it.
+		with cte as 
+				(select r.year, concat(d.forename,' ',d.surname) as driver_name
+				, sum(res.points) as tot_points
+				, rank() over(partition by r.year order by sum(res.points) desc) as rnk
+				from races r
+				join driver_standings ds on ds.raceid=r.raceid
+				join drivers d on d.driverid=ds.driverid
+				join results res on res.raceid=r.raceid and res.driverid=ds.driverid --and res.constructorid=cs.constructorid 
+				--where r.year>=2000
+				group by r.year,  res.driverid, concat(d.forename,' ',d.surname) ),
+			cte_rnk as
+				(select * from cte where rnk=1)
+		select driver_name, count(1) as no_of_championships
+		from cte_rnk
+		group by driver_name
+		order by 2 desc;
+
+
+10) Who has won the most constructor championships
+		with cte as
+				(select r.year, c.name as constructor_name
+				, sum(res.points) as tot_points
+				, rank() over(partition by r.year order by sum(res.points) desc) as rnk
+				from races r
+				join constructor_standings cs on cs.raceid=r.raceid
+				join constructors c on c.constructorid = cs.constructorid
+				join constructor_results res on res.raceid=r.raceid and res.constructorid=cs.constructorid --and res.constructorid=cs.constructorid 
+				--where r.year>=2022
+				group by r.year,  res.constructorid, c.name),
+			cte_rnk as
+				(select * from cte where rnk=1)
+		select constructor_name, count(1) as no_of_championships
+		from cte_rnk
+		group by constructor_name
+		order by 2 desc;
+
+
+11) How many races has India hosted?
+	select c.name as circuit_name,c.country, count(1) no_of_races
+	from races r
+	join circuits c on c.circuitid=r.circuitid
+	where c.country='India'
+	group by c.name,c.country;
+
+
 
 
 
