@@ -1,0 +1,44 @@
+
+12) Identify the driver who won the championship or was a runner-up. Also display the team they belonged to. 
+	with cte as 
+			(select r.year, concat(d.forename,' ',d.surname) as driver_name, c.name as constructor_name
+			, sum(res.points) as tot_points
+			, rank() over(partition by r.year order by sum(res.points) desc) as rnk
+			from races r
+			join driver_standings ds on ds.raceid=r.raceid
+			join drivers d on d.driverid=ds.driverid
+			join results res on res.raceid=r.raceid and res.driverid=ds.driverid 
+		    join constructors c on c.constructorid=res.constructorid 
+			where r.year>=2020
+			group by r.year,  res.driverid, concat(d.forename,' ',d.surname), c.name)
+	select year, driver_name, case when rnk=1 then 'Winner' else 'Runner-up' end as flag 
+	from cte 
+	where rnk<=2;
+
+
+13) Display the top 10 drivers with most wins.
+	select driver_name, race_wins
+	from (
+		select ds.driverid, concat(d.forename,' ',d.surname) as driver_name
+		, count(1) as race_wins
+		, rank() over(order by count(1) desc) as rnk
+		from driver_standings ds
+		join drivers d on ds.driverid=d.driverid
+		where position=1
+		group by ds.driverid, concat(d.forename,' ',d.surname)
+		order by race_wins desc, driver_name) x
+	where rnk <= 10;
+
+
+14) Display the top 3 constructors of all time.
+	select constructor_name, race_wins
+	from (
+		select cs.constructorid, c.name as constructor_name
+		, count(1) as race_wins
+		, rank() over(order by count(1) desc) as rnk
+		from constructor_standings cs
+		join constructors c on c.constructorid=cs.constructorid
+		where position = 1
+		group by cs.constructorid, c.name
+		order by race_wins desc) x
+	where rnk <= 3;
