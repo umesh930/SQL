@@ -42,3 +42,65 @@
 		group by cs.constructorid, c.name
 		order by race_wins desc) x
 	where rnk <= 3;
+
+
+15. Identify the drivers who have won races with multiple teams.
+with cte as (
+select d.forename||''||d.surname as driver_name,c.name,count(r.position) as tot_count,
+dense_rank() over (partition by year order by count(r.position)desc)drnk
+from results r
+join races ra on ra.raceid = r.raceid
+join drivers d on d.driverid = r.driverid
+join constructors c on c.constructorid = r.constructorid
+group by ra.year,d.driverid,c.constructorid
+)
+select driver_name,name as constructor_name,string_agg(name,',')
+from cte
+where drnk=1
+group by driver_name,name
+having count(1)>1
+
+
+16. How many drivers have never won any race.
+select driverid
+from drivers 
+where driverid not in (
+select distinct driverid
+from driver_standings
+where position = 1
+)
+17. Are there any constructors who never scored a point? if so mention their name and 
+how many races they participated in?
+
+select c.name as constructor_name,count(1) as tot_races_attend,cs.points as tot_points_all_races 
+from constructor_standings cs
+join constructors c on c.constructorid =cs.constructorid
+where points=0
+group by c.constructorid,cs.points
+order by tot_races_attend desc
+
+
+18.Mention the drivers who have won more than 50 races.
+
+select d.forename||''||d.surname as driver_name,count(1) TOT_COUNT
+from driver_standings r
+join drivers d on d.driverid = r.driverid
+where position =1
+group by d.driverid
+having count(1) >50
+order by tot_count desc
+
+19) Identify the podium finishers of each race in 2022 season
+
+select d.forename||''||surname as driver_name,ds.position
+from driver_standings ds
+join races r on r.raceid = ds.raceid
+join drivers d on d.driverid = ds.driverid
+where ds.position <=3 and r.year =2022
+	
+20) For 2022 season, mention the points structure for each position. 
+i.e. how many points are awarded to each race finished position. 
+select r.raceid,re.points,dense_rank() over( partition by r.raceid order by points desc)position
+from races r 
+join results re on re.raceid =r.raceid
+where year = 2022 and points > 0
