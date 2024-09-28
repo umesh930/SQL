@@ -1,0 +1,132 @@
+
+ 21. How many drivers participated in 2022 season?
+
+ select count(distinct (driverid)) as tot_drivers
+ from driver_standings ds 
+ join races r on r.raceid = ds.raceid
+ where year =2022
+ 
+ 22. How many races has the top 5 constructors won in the last 10 years
+ 
+ with top_five as (
+select c.constructorid,c.name,count(1) as tot_win
+from constructor_standings cs 
+join races r on r.raceid = cs.raceid
+join constructors c on c.constructorid =cs.constructorid
+where position = 1 --and extract(year from current_date)::int - year <= 10 
+group by c.constructorid,c.name
+	 order by tot_win desc
+	 limit 5)
+select cte.constructorid,cte.name,coalesce (x. tot_win,0) as tot_win 
+from top_five cte 
+left join (select c.constructorid,c.name,count(1) as tot_win
+from constructor_standings cs 
+join races r on r.raceid = cs.raceid
+join constructors c on c.constructorid =cs.constructorid
+where position = 1 and extract(year from current_date)::int - year <= 10 
+group by c.constructorid,c.name) x on x.constructorid = cte.constructorid
+
+23. Display the winners of every sprint so far in F1
+
+select r.year, r.name, concat(d.forename,' ',d.surname) as driver_name
+	from sprint_results sr
+	join drivers d on d.driverid=sr.driverid
+	join races r on r.raceid=sr.raceid
+	where sr.position=1
+	order by 1,2;
+	
+ 24. Find the driver who has the most no of Did Not Qualify during the race.
+
+select d.driverid,d.forename||d.surname as driver_name,count(1) as disqualify_count
+from status s
+join results r on r.statusid = s.statusid
+join drivers d on d.driverid = r.driverid
+where status= 'Did not qualify'
+group by d.driverid
+order by disqualify_count desc
+limit 1
+
+25. During the last race of 2022 season, identify the drivers who did not finish the race 
+and the reason for it.
+
+select d.forename||''||d.surname as driver_name,s.status
+from results r 
+join drivers d on d.driverid = r.driverid
+join races res on res.raceid = r.raceid 
+join status s on s.statusid= r.statusid
+where res.raceid= (select max(raceid) from races where year = 2022) and s.status!='Finished'
+
+
+26) What is the average lap time for each F1 circuit. Sort based on least lap time.
+	
+	select cr.circuitid, cr.name as circuit_name
+	, cr.location, cr.country
+	, avg(lt.time) as avg_lap_time
+	from circuits cr
+	left join races r on cr.circuitid=r.circuitid
+	left join lap_times lt on r.raceid=lt.raceid
+	group by cr.circuitid, cr.name, cr.location, cr.country
+	order by avg_lap_time ;
+
+
+27) Who won the drivers championship when India hosted F1 for the first time?
+	with driver_champ_points as 
+			(select r.year, concat(d.forename,' ',d.surname) as driver_name
+			, sum(res.points) as tot_points
+			, rank() over(partition by r.year order by sum(res.points) desc) as rnk
+			from races r
+			join driver_standings ds on ds.raceid=r.raceid
+			join drivers d on d.driverid=ds.driverid
+			join results res on res.raceid=r.raceid and res.driverid=ds.driverid 
+			group by r.year,  res.driverid, concat(d.forename,' ',d.surname) ),
+		driver_champ as
+			(select * from driver_champ_points where rnk=1),
+		india_first_year as
+			(select min(year) as first_yr from races 
+			 where circuitid in (select circuitid from circuits 
+								 where country='India'))
+	select year, driver_name
+	from driver_champ
+	where year = (select first_yr from india_first_year);
+
+
+28) Which driver has done the most lap time in F1 history?
+	select driver_name, total_lap_time
+	from (
+		select lt.driverid
+		, concat(d.forename,' ',d.surname) as driver_name
+		, sum(time) as total_lap_time
+		, rank() over(order by sum(time) desc) as rnk
+		from lap_times lt
+		join drivers d on d.driverid=lt.driverid
+		group by lt.driverid, concat(d.forename,' ',d.surname)) x
+	where rnk=1;
+
+
+29) Name the top 3 drivers who have got the most podium finishes in F1 (Top 3 race finishes)
+	select driver_name, no_of_podiums
+	from (select ds.driverid, concat(d.forename,' ',d.surname) as driver_name
+		, count(1) as no_of_podiums
+		, rank() over(order by count(1) desc) as rnk
+		from driver_standings ds 
+		join drivers d on d.driverid=ds.driverid
+		where ds.position <= 3
+		group by ds.driverid, concat(d.forename,' ',d.surname)) x
+	where rnk<=3;
+
+
+30) Which driver has the most pole position (no 1 in qualifying)
+
+select driver_name, pole_positions
+	from (select q.driverid, concat(d.forename,' ',d.surname) as driver_name
+		, count(1) as pole_positions
+		, rank() over(order by count(1) desc) as rnk
+		from qualifying q
+		join drivers d on d.driverid=q.driverid
+		where position=1
+		group by q.driverid, concat(d.forename,' ',d.surname)
+		order by pole_positions desc) x
+	where rnk=1;
+
+
+
